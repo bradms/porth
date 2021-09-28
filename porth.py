@@ -9,6 +9,7 @@ from typing import *
 from enum import Enum, auto
 from dataclasses import dataclass
 from copy import copy
+from collections import deque
 
 debug=False
 
@@ -100,7 +101,7 @@ MEM_CAPACITY = 640_000
 
 # TODO: introduce the profiler mode
 def simulate_little_endian_linux(program: Program, argv: List[str]):
-    stack: List[int] = []
+    stack: Deque[int] = deque()
     mem = bytearray(NULL_POINTER_PADDING + STR_CAPACITY + MEM_CAPACITY)
     str_offsets = {}
     str_size = NULL_POINTER_PADDING
