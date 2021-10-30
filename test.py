@@ -52,10 +52,12 @@ DEFAULT_TEST_CASE=TestCase(argv=[], stdin=bytes(), returncode=0, stdout=bytes(),
 def load_test_case(file_path: str) -> Optional[TestCase]:
     try:
         with open(file_path, "rb") as f:
-            argv = []
             argc = read_int_field(f, b'argc')
-            for index in range(argc):
-                argv.append(read_blob_field(f, b'arg%d' % index).decode('utf-8'))
+            argv = [
+                read_blob_field(f, b'arg%d' % index).decode('utf-8')
+                for index in range(argc)
+            ]
+
             stdin = read_blob_field(f, b'stdin')
             returncode = read_int_field(f, b'returncode')
             stdout = read_blob_field(f, b'stdout')
@@ -197,7 +199,7 @@ if __name__ == '__main__':
     if len(argv) > 0:
         subcommand, *argv = argv
 
-    if subcommand == 'update' or subcommand == 'record':
+    if subcommand in ['update', 'record']:
         subsubcommand = 'output'
         if len(argv) > 0:
             subsubcommand, *argv = argv
@@ -225,7 +227,7 @@ if __name__ == '__main__':
             usage(exe_name)
             print("[ERROR] unknown subcommand `%s %s`. Available commands are `%s input` or `%s output`" % (subcommand, subsubcommand, subcommand, subcommand), file=sys.stderr)
             exit(1)
-    elif subcommand == 'run' or subcommand == 'test':
+    elif subcommand in ['run', 'test']:
         target = './tests/'
 
         if len(argv) > 0:
