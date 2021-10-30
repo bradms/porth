@@ -351,7 +351,7 @@ def simulate_little_endian_linux(program: Program, argv: List[str]):
                 elif op.operand == Intrinsic.LOAD64:
                     addr = stack.pop()
                     _bytes = bytearray(8)
-                    for offset in range(0,8):
+                    for offset in range(8):
                         _bytes[offset] = mem[addr + offset]
                     stack.append(int.from_bytes(_bytes, byteorder="little"))
                     ip += 1
@@ -366,7 +366,7 @@ def simulate_little_endian_linux(program: Program, argv: List[str]):
                 elif op.operand == Intrinsic.FORTH_LOAD64:
                     addr = stack.pop()
                     _bytes = bytearray(8)
-                    for offset in range(0,8):
+                    for offset in range(8):
                         _bytes[offset] = mem[addr + offset]
                     stack.append(int.from_bytes(_bytes, byteorder="little"))
                     ip += 1
@@ -841,9 +841,7 @@ def type_check_program(program: Program):
                 a_type, a_loc = stack.pop()
                 b_type, b_loc = stack.pop()
 
-                if a_type == DataType.INT and b_type == DataType.PTR:
-                    pass
-                else:
+                if a_type != DataType.INT or b_type != DataType.PTR:
                     compiler_error_with_expansion_stack(op.token, "invalid argument type for STORE intrinsic")
                     exit(1)
             elif op.operand == Intrinsic.FORTH_LOAD:
@@ -867,9 +865,7 @@ def type_check_program(program: Program):
                 a_type, a_loc = stack.pop()
                 b_type, b_loc = stack.pop()
 
-                if a_type == DataType.PTR and b_type == DataType.INT:
-                    pass
-                else:
+                if a_type != DataType.PTR or b_type != DataType.INT:
                     compiler_error_with_expansion_stack(op.token, "invalid argument type for STORE intrinsic")
                     exit(1)
             elif op.operand == Intrinsic.LOAD64:
@@ -893,9 +889,11 @@ def type_check_program(program: Program):
                 a_type, a_loc = stack.pop()
                 b_type, b_loc = stack.pop()
 
-                if (a_type == DataType.INT or a_type == DataType.PTR) and b_type == DataType.PTR:
-                    pass
-                else:
+                if (
+                    a_type != DataType.INT
+                    and a_type != DataType.PTR
+                    or b_type != DataType.PTR
+                ):
                     compiler_error_with_expansion_stack(op.token, "invalid argument type for STORE64 intrinsic: %s" % [b_type, a_type])
                     exit(1)
             elif op.operand == Intrinsic.FORTH_LOAD64:
@@ -919,9 +917,11 @@ def type_check_program(program: Program):
                 a_type, a_loc = stack.pop()
                 b_type, b_loc = stack.pop()
 
-                if (b_type == DataType.INT or b_type == DataType.PTR) and a_type == DataType.PTR:
-                    pass
-                else:
+                if (
+                    b_type != DataType.INT
+                    and b_type != DataType.PTR
+                    or a_type != DataType.PTR
+                ):
                     compiler_error_with_expansion_stack(op.token, "invalid argument type for STORE64 intrinsic: %s" % [b_type, a_type])
                     exit(1)
             elif op.operand == Intrinsic.CAST_PTR:
@@ -939,7 +939,6 @@ def type_check_program(program: Program):
             elif op.operand == Intrinsic.HERE:
                 stack.append((DataType.INT, op.token))
                 stack.append((DataType.PTR, op.token))
-            # TODO: figure out how to type check syscall arguments and return types
             elif op.operand == Intrinsic.SYSCALL0:
                 if len(stack) < 1:
                     not_enough_arguments(op)
@@ -998,15 +997,7 @@ def type_check_program(program: Program):
         elif op.typ == OpType.END:
             block_snapshot, block_type = block_stack.pop()
             assert len(OpType) == 10, "Exhaustive handling of op types"
-            if block_type == OpType.ELSE:
-                expected_types = list(map(lambda x: x[0], block_snapshot))
-                actual_types = list(map(lambda x: x[0], stack))
-                if expected_types != actual_types:
-                    compiler_error_with_expansion_stack(op.token, 'all branches of the if-block must produce the same types of the arguments on the data stack')
-                    compiler_note(op.token.loc, 'Expected types: %s' % expected_types)
-                    compiler_note(op.token.loc, 'Actual types: %s' % actual_types)
-                    exit(1)
-            elif block_type == OpType.ELIF:
+            if block_type == OpType.ELSE or block_type == OpType.ELIF:
                 expected_types = list(map(lambda x: x[0], block_snapshot))
                 actual_types = list(map(lambda x: x[0], stack))
                 if expected_types != actual_types:
